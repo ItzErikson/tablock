@@ -1,227 +1,162 @@
-# TabLock
+# 🔒 TabLock
 
-**Lock your share before the bill arrives. Settle instantly.**
+> **Lock your share before the bill arrives. Settle instantly.**
 
-## What is TabLock
+Built for the **SCBC 2026 Hackathon** — Circle Track: Programmable Money for Humans & Agents
 
-Group dinners are awkward when the bill arrives. Someone pays, everyone Venmos
-them later — or doesn't. Equal splits punish people who ordered less. And nobody
-wants to be the one who has to chase. TabLock fixes this by turning the
-commitment upfront and financial. Everyone locks their USDC into a smart
-contract before the meal ends. A 40% buffer covers tax and tip. When someone
-pays the physical bill and declares the actual total, the contract calculates
-each person's exact proportional share, sends it to the payer, and returns
-everyone's unused buffer automatically. No chasing. No unfair splits. No trust
-required — the code enforces it.
+![Solidity](https://img.shields.io/badge/Solidity-0.8.19-363636?logo=solidity)
+![Arc Testnet](https://img.shields.io/badge/Network-Arc%20Testnet-blue)
+![USDC](https://img.shields.io/badge/Token-USDC-2775CA)
+![React](https://img.shields.io/badge/Frontend-React-61DAFB?logo=react)
+![Node.js](https://img.shields.io/badge/Backend-Node.js-339933?logo=node.js)
+
+---
+
+## The Problem
+
+Group dinners are awkward when the bill arrives. Someone pays upfront, then spends the next week chasing people on Venmo — hoping everyone pays, trusting one person to do the math, and relying on social pressure to make it work.
+
+**There is no enforcement. There is no guarantee.**
+
+## The Solution
+
+TabLock makes the commitment financial and upfront.
+
+1. Everyone locks their estimated share in a smart contract on Arc
+2. A **40% buffer** covers tax and tip automatically
+3. When the payer declares the actual bill total, the contract calculates each person's exact proportional share, sends it to the payer, and returns unused buffer to each member
+
+No chasing. No unfair splits. No trust required — the contract enforces it.
 
 ---
 
 ## How It Works
 
-### Step by step
+**Step 1 — Create a Tab**
+The organizer creates a tab, enters their food estimate, and locks USDC (estimate × 1.4) into the smart contract. A shareable link and QR code are generated.
 
-1. **Create a tab** — The organizer sets a tab name, enters their food estimate,
-   and locks USDC (food estimate × 1.4 for the buffer).
-2. **Share the code** — Everyone else joins via the share code or link. Each
-   person enters their own food estimate and locks their USDC.
-3. **Someone pays the physical bill** — Any member clicks "I Paid the Bill" and
-   enters the actual total (including tax and tip).
-4. **Contract settles automatically** — Each active member's proportional share
-   is sent to the payer. Unused buffer (locked - share) is returned to each
-   person. Done.
+**Step 2 — Members Join**
+Each member opens the link, enters their food estimate, and locks their share. All funds sit in the contract — no one can touch them.
 
-### The buffer math
+**Step 3 — Settle**
+When the bill arrives, whoever paid the restaurant declares the actual total. The contract atomically:
+- Sends each member's proportional share to the payer
+- Returns each member's unused buffer back to them
 
-Each person locks their food estimate × 1.4. The extra 40% is a buffer for tax,
-tip, and rounding. After the actual bill is declared:
+**Settlement Formula**
 
-```
-finalShare = (yourFoodEstimate / totalFoodEstimate) × actualBill
-returned   = yourLocked - finalShare
-```
-
-**Example:**
-
-| Person | Food estimate | Locked (×1.4) |
-|--------|--------------|---------------|
-| Alice  | $30          | $42           |
-| Bob    | $20          | $28           |
-| Carol  | $25          | $35           |
-| **Total** | **$75**   | **$105**      |
-
-Actual bill: **$82** (food + tax + tip)
-
-| Person | Share calculation       | Final share | Returned |
-|--------|------------------------|-------------|----------|
-| Alice  | (30/75) × 82 = $32.80  | $32.80      | $9.20    |
-| Bob    | (20/75) × 82 = $21.87  | $21.87      | $6.13    |
-| Carol  | (25/75) × 82 = $27.33  | $27.33      | $7.67    |
-
-Bob paid the physical bill:
-- Receives Alice's $32.80 + Carol's $27.33
-- His own $21.87 is deducted from his locked $28
-- He gets $6.13 back (his unused buffer)
-- Net cost to Bob: **$21.87** — his fair share, nothing more
+    share = (memberFoodEstimate / totalFoodEstimate) × actualBill
+    returned = memberLocked - share
 
 ---
 
-## Why Arc
+## Tech Stack
 
-- **USDC is the native gas token** — no ETH or AVAX needed. You pay for
-  transactions with the same token you're splitting. Fees are predictable and
-  cheap.
-- **Sub-second finality** — settlement is instant. The funds move the moment the
-  transaction lands, not after 12 confirmations.
-- **Purpose-built for programmable money** — TabLock is exactly the use case Arc
-  was designed for: real-value USDC flows with smart contract logic and no
-  bridging complexity.
-
-**Arc Testnet details:**
-- RPC: `https://rpc.testnet.arc.network`
-- Chain ID: `5042002`
-- Explorer: `https://testnet.arcscan.app`
-- USDC: `0x3600000000000000000000000000000000000000`
-- Faucet: `https://faucet.circle.com`
+| Layer | Technology |
+|-------|-----------|
+| Smart Contract | Solidity 0.8.19, Hardhat, OpenZeppelin |
+| Blockchain | Arc Testnet (Chain ID: 5042002) |
+| Payment Token | USDC (0x3600000000000000000000000000000000000000) |
+| Frontend | React, Vite, Tailwind CSS, ethers.js |
+| Backend | Node.js, Express, MongoDB |
 
 ---
 
-## Setup
+## Deployed Contract
 
-### 1. Contracts
+| Network | Address |
+|---------|---------|
+| Arc Testnet | 0xBb3F4bcC03DFcA3Cb12FD5044231f8322E2E54Df |
 
-```bash
-cd contracts
-npm install
-cp .env.example .env   # fill in PRIVATE_KEY
-npx hardhat run scripts/deploy.js --network arc
-```
-
-The deployed address is saved to `contracts/deployments.json`. Copy it into the
-backend and frontend `.env` files.
-
-### 2. Backend
-
-```bash
-cd backend
-npm install
-# Edit .env — set TABLOCK_CONTRACT_ADDRESS to your deployed address
-node src/index.js
-```
-
-Requires MongoDB running locally on `mongodb://localhost:27017`. The backend
-will warn but continue if MongoDB is unavailable.
-
-### 3. Frontend
-
-```bash
-cd frontend
-npm install
-# Edit .env — set VITE_CONTRACT_ADDRESS to your deployed address
-npm run dev
-```
-
-Opens at `http://localhost:3000`.
-
----
-
-## Smart Contract Functions
-
-All functions are in `contracts/contracts/TabLock.sol`.
-
-### `createTab(name, organizerName, foodEstimateRaw) → tabId`
-Creates a new tab and locks the organizer's USDC. Requires prior ERC-20 approval.
-- Caller: anyone (becomes organizer)
-- `foodEstimateRaw`: USDC in 6-decimal units ($30 = 30000000)
-- Locked amount: `foodEstimateRaw × 1.4`
-
-### `joinTab(tabId, displayName, foodEstimateRaw)`
-Joins an open tab and locks USDC. Requires prior ERC-20 approval.
-- Caller: any non-member
-- Tab must be OPEN
-
-### `removeMember(tabId, memberAddress)`
-Removes a member and returns their full locked amount to them.
-- Caller: organizer only
-- Cannot remove the organizer themselves
-- Tab must be OPEN
-
-### `leaveTab(tabId)`
-The caller leaves the tab voluntarily and gets their full locked amount back.
-- Caller: any non-organizer active member
-- Tab must be OPEN
-
-### `settleBill(tabId, actualBillRaw)`
-Declares the actual bill total. Calculates shares, pays the payer, returns buffers.
-- Caller: any active member (they become the declared payer)
-- Tab must be OPEN with ≥ 2 active members
-
-### `cancelTab(tabId)`
-Cancels the tab and returns all locked USDC to every active member.
-- Caller: organizer only
-- Tab must be OPEN
-
-### Read functions
-- `getTab(tabId)` — full tab data
-- `getMemberInfo(tabId, address)` — per-member data
-- `getTabMembers(tabId)` — array of member addresses
-- `getUserTabs(address)` — all tab IDs for a user
-
----
-
-## Edge Cases
-
-### Someone leaves before settlement (Example 2)
-
-Alice ($30), Bob ($20), Carol ($25) join. Carol leaves → gets her $35 back.
-
-New totals: food $50, locked $70. Actual bill: $55.
-
-- Alice: (30/50) × 55 = $33 → returned $9
-- Bob:   (20/50) × 55 = $22 → returned $6
-
-Proportions adjust automatically based on remaining active members.
-
-### Bill much larger than expected (Example 3)
-
-Alice $10 food → locks $14. Bob $10 food → locks $14. Actual bill: $40.
-
-- Alice share: (10/20) × 40 = $20 → **capped at $14**, returned $0
-- Bob share: (10/20) × 40 = $20 → **capped at $14**, returned $0
-
-Payer receives $14 + $14 = $28 from others. Their own $14 covered their capped
-share. Payer absorbs the $6 gap. This only happens when the actual bill exceeds
-the total locked amount — i.e., more than 40% over food estimates. Extremely
-rare in practice. The UI warns users when this might occur.
+[View on Arc Explorer](https://testnet.arcscan.app/address/0xBb3F4bcC03DFcA3Cb12FD5044231f8322E2E54Df)
 
 ---
 
 ## Project Structure
 
-```
-tablock/
-  contracts/
-    contracts/TabLock.sol      ← Solidity contract
-    scripts/deploy.js          ← Hardhat deploy script
-    hardhat.config.js
-    .env                       ← PRIVATE_KEY, ARC_RPC
-  backend/
-    src/
-      models/Tab.js            ← MongoDB Tab schema
-      models/Session.js        ← MongoDB Session schema
-      services/contract.js     ← ethers.js contract sync
-      routes/tabs.js           ← /api/tabs routes
-      routes/sessions.js       ← /api/sessions routes
-      index.js                 ← Express app entry
-    .env                       ← MONGODB_URI, contract address
-  frontend/
-    src/
-      hooks/useWallet.jsx      ← MetaMask wallet state
-      services/contract.js     ← contract interaction helpers
-      services/api.js          ← backend API calls
-      pages/Home.jsx
-      pages/CreateTab.jsx
-      pages/TabLobby.jsx       ← main shared screen
-      pages/MyTabs.jsx
-      components/              ← Navbar, MemberCard, modals, QR
-    .env                       ← VITE_CONTRACT_ADDRESS
-```
+    tablock/
+    ├── contracts/          # Solidity smart contract + Hardhat config
+    │   └── contracts/
+    │       └── TabLock.sol
+    ├── backend/            # Express API + MongoDB + chain sync
+    │   └── src/
+    │       ├── models/
+    │       ├── routes/
+    │       └── services/
+    └── frontend/           # React app
+        └── src/
+            ├── components/
+            ├── pages/
+            ├── hooks/
+            └── services/
+
+---
+
+## Local Setup
+
+### Prerequisites
+
+- Node.js v18+
+- MongoDB running locally
+- MetaMask with Arc Testnet configured
+- Testnet USDC from https://faucet.circle.com
+
+### Arc Testnet MetaMask Config
+
+| Field | Value |
+|-------|-------|
+| Network Name | Arc Testnet |
+| RPC URL | https://rpc.testnet.arc.network |
+| Chain ID | 5042002 |
+| Currency Symbol | USDC |
+
+### 1. Deploy the Contract
+
+    cd contracts
+    cp .env.example .env
+    # Add your PRIVATE_KEY to .env
+    npm install
+    npx hardhat run scripts/deploy.js --network arc
+
+### 2. Start the Backend
+
+    cd backend
+    cp .env.example .env
+    # Add TABLOCK_CONTRACT_ADDRESS from step 1
+    npm install
+    npm run dev
+
+### 3. Start the Frontend
+
+    cd frontend
+    cp .env.example .env
+    # Add VITE_CONTRACT_ADDRESS from step 1
+    npm install
+    npm run dev
+
+Open http://localhost:5173
+
+---
+
+## Key Features
+
+- **Trustless escrow** — funds held by contract, not by any person
+- **Proportional splits** — based on food estimate, not equal division
+- **40% buffer** — automatically covers tax and tip, unused amount returned
+- **Share codes** — join a tab with a human-readable code like GOLDEN-FEAST-7
+- **QR codes** — scan to join from any device
+- **Real-time sync** — tab state polls every 10 seconds across all participants
+- **Arc Explorer links** — every settlement links to the on-chain transaction
+
+---
+
+## Smart Contract Security
+
+- ReentrancyGuard on all state-mutating functions
+- Address reuse prevention — removed members cannot rejoin
+- Payer cap logic — if actual bill exceeds locked amounts, shares are capped and payer absorbs shortfall
+- All funds accounted for — contract holds zero residual USDC after settlement
+
+---
+
+*Built at SCBC 2026 — Southern California Blockchain Conference Hackathon*
