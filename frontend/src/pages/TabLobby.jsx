@@ -331,7 +331,7 @@ export default function TabLobby() {
                 <span className="text-gray-300">{m.displayName}</span>
                 <span className="text-gray-400">
                   paid <span className="text-white">${fromRawUsdc(m.finalShare)}</span>{" "}
-                  · got back <span className="text-blue-400">${fromRawUsdc(m.returned)}</span>
+                  · got back <span className="text-blue-400">${fromRawUsdc(m.locked - m.finalShare)}</span>
                 </span>
               </div>
             ))}

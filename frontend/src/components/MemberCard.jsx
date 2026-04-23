@@ -43,7 +43,7 @@ export default function MemberCard({
                 <span className="text-gray-400">Final share</span>
                 <span className="text-white">${fromRawUsdc(member.finalShare)}</span>
                 <span className="text-gray-400">Returned</span>
-                <span className="text-blue-400">${fromRawUsdc(member.returned)}</span>
+                <span className="text-blue-400">${fromRawUsdc(member.locked - member.finalShare)}</span>
               </>
             )}
           </div>
